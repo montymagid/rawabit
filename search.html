@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نتائج البحث والمقارنة | روابط</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Almarai:wght@400;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+
+<section class="page-hero" style="padding:34px 0;">
+  <div class="container" style="text-align:start;">
+    <h1 id="search-title" style="font-size:24px;">نتائج البحث</h1>
+    <p id="search-sub">قارن كل الخيارات المتاحة واختر الأنسب لك</p>
+  </div>
+</section>
+
+<section class="section-tight">
+  <div class="container">
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:24px;" id="category-filters"></div>
+    <div id="results-wrap">
+      <div class="compare-group skeleton" style="height:160px;"></div>
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer" id="site-footer"></footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/assets/js/config.js"></script>
+<script src="/assets/js/supabase-client.js"></script>
+<script src="/assets/js/app.js"></script>
+<script src="/assets/js/search.js"></script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الأسئلة الشائعة | روابط</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Almarai:wght@400;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+
+<section class="page-hero">
+  <div class="container">
+    <h1>الأسئلة الشائعة</h1>
+    <p>كل ما تحتاج معرفته عن روابط، للمتسوقين وأصحاب المتاجر</p>
+  </div>
+</section>
+
+<section class="section-tight">
+  <div class="container" style="max-width:780px;">
+
+    <h3 style="margin-bottom:14px; color:var(--emerald-700);">للمتسوقين</h3>
+    <div id="faq-shoppers"></div>
+
+    <h3 style="margin:34px 0 14px; color:var(--emerald-700);">لأصحاب المتاجر</h3>
+    <div id="faq-stores"></div>
+
+  </div>
+</section>
+
+<footer class="site-footer" id="site-footer"></footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/assets/js/config.js"></script>
+<script src="/assets/js/supabase-client.js"></script>
+<script src="/assets/js/app.js"></script>
+<script>
+const shopperFaqs = [
+  { q: 'هل أشتري المنتج من روابط مباشرة؟', a: 'لا. روابط منصة مقارنة أسعار فقط. عند اختيارك لعرض معيّن، تنتقل لصفحة الشراء لدى المتجر نفسه أو نون أو أمازون، وتُكمل عملية الشراء والدفع هناك مباشرة.' },
+  { q: 'هل استخدام روابط مجاني للمتسوق؟', a: 'نعم، البحث والمقارنة مجانية بالكامل ولا تحتاج لإنشاء حساب.' },
+  { q: 'من المسؤول عن الشحن والاسترجاع؟', a: 'المتجر الذي اشتريت منه (أو نون / أمازون) هو المسؤول الكامل عن الشحن، الفوترة، والاسترجاع، وليس روابط.' },
+  { q: 'لماذا تختلف الأسعار أحيانًا عمّا هو معروض في روابط؟', a: 'الأسعار يديرها كل متجر بشكل مستقل وقد تتغير من طرفه في أي وقت. ننصح دائمًا بتأكيد السعر النهائي في صفحة المتجر قبل إتمام الشراء.' },
+  { q: 'كيف تربح روابط إذا كانت مجانية للمتسوق؟', a: 'تحصل روابط على عمولة إحالة صغيرة من المتجر أو من برنامج الأفلييت (مثل نون أو أمازون) عند إتمام عملية شراء عبر رابطنا، دون أي تكلفة إضافية عليك كمتسوق.' },
+];
+
+const storeFaqs = [
+  { q: 'هل التسجيل كمتجر في روابط مجاني؟', a: 'نعم، التسجيل مجاني بالكامل حاليًا بدون أي اشتراك شهري أو سنوي.' },
+  { q: 'كم يستغرق قبول طلب تسجيل متجري؟', a: 'يقوم فريق روابط بمراجعة كل طلب يدويًا للتأكد من صحة البيانات، وعادة ما تصلك نتيجة المراجعة خلال وقت قصير عبر البريد الإلكتروني.' },
+  { q: 'كيف أضيف منتجاتي؟', a: 'من لوحة تحكم متجرك (بعد الموافقة على طلبك) يمكنك إضافة المنتجات بطريقتين: الأولى بلصق رابط الأفلييت الخاص بك من نون أو أمازون ليحاول النظام تعبئة الاسم والصورة والسعر تلقائيًا، والثانية بالإضافة اليدوية الكاملة لأي منتج، مناسبة للمتاجر التي ليس لديها رابط عمولة.' },
+  { q: 'هل تعبئة بيانات المنتج من رابط نون/أمازون تعمل دائمًا بشكل تلقائي؟', a: 'نحاول تعبئة أكبر قدر ممكن من البيانات تلقائيًا، لكن بعض صفحات المتاجر تمنع القراءة الآلية، فقد تحتاج أحيانًا لإكمال الاسم أو السعر أو الصورة يدويًا قبل الحفظ — وهذا طبيعي ولا يمنع نشر المنتج.' },
+  { q: 'هل روابط تتدخل في الشحن أو الدفع لمنتجاتي؟', a: 'أبدًا. روابط تعرض منتجك للمقارنة فقط، وعندما يضغط العميل "اشترِ الآن" يذهب مباشرة لصفحة الشراء في متجرك أو في نون/أمازون، وتبقى أنت المسؤول الكامل عن الطلب والدفع والشحن.' },
+  { q: 'ماذا يحدث إذا أوقفت الإدارة متجري؟', a: 'يصلك إشعار داخل لوحة التحكم وبريد إلكتروني موضّح فيه سبب الإيقاف (مثل مشكلة في الدفع أو مخالفة للشروط)، ويمكنك التواصل مع الدعم لحل المشكلة وإعادة تفعيل متجرك.' },
+  { q: 'هل يمكنني تعديل أو حذف منتجاتي في أي وقت؟', a: 'نعم، لديك تحكم كامل بمنتجاتك من لوحة تحكم متجرك: إضافة، تعديل، إيقاف مؤقت، أو حذف نهائي.' },
+];
+
+function renderFaq(list, containerId){
+  const el = document.getElementById(containerId);
+  el.innerHTML = list.map((item, i) => `
+    <div class="faq-item" data-i="${i}">
+      <div class="faq-q"><span>${item.q}</span><span class="fa-arrow">⌄</span></div>
+      <div class="faq-a">${item.a}</div>
+    </div>`).join('');
+  el.querySelectorAll('.faq-item').forEach(item => {
+    item.querySelector('.faq-q').addEventListener('click', () => item.classList.toggle('open'));
+  });
+}
+renderFaq(shopperFaqs, 'faq-shoppers');
+renderFaq(storeFaqs, 'faq-stores');
+</script>
+</body>
+</html>

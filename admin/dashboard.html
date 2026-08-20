@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة إدارة المنصة | روابط</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Almarai:wght@400;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+
+<div id="guard-screen" style="display:none; min-height:100vh; align-items:center; justify-content:center; text-align:center; padding:24px;">
+  <div>
+    <div style="font-size:44px;">🚫</div>
+    <h2 style="margin-top:14px;">وصول غير مصرح به</h2>
+    <p style="color:var(--ink-soft); margin-top:8px;">هذه اللوحة مخصصة لإدارة منصة روابط فقط.</p>
+    <a href="/index.html" class="btn btn-ghost" style="margin-top:20px;">العودة للرئيسية</a>
+  </div>
+</div>
+
+<div class="dash" id="dash-app" style="display:none;">
+  <aside class="dash-side">
+    <a href="/index.html" class="brand"><span style="color:#E3A857;">🔗</span><span>روابط · إدارة</span></a>
+    <nav class="dash-nav">
+      <a href="#" data-tab="overview" class="active">📊 نظرة عامة</a>
+      <a href="#" data-tab="requests">🆕 طلبات التسجيل <span id="req-badge" style="background:#E3A857;color:#12211A;border-radius:999px;padding:1px 8px;font-size:11px;margin-inline-start:4px;"></span></a>
+      <a href="#" data-tab="stores">🏬 كل المتاجر</a>
+      <a href="#" data-tab="products">📦 كل المنتجات</a>
+      <a href="#" data-tab="categories">🗂️ التصنيفات</a>
+      <a href="#" data-tab="settings">⚙️ إعدادات المنصة</a>
+      <a href="/index.html">🌐 عرض المنصة</a>
+      <a href="#" id="logout-link">🚪 تسجيل الخروج</a>
+    </nav>
+  </aside>
+
+  <main class="dash-main">
+    <div class="dash-topbar">
+      <h1 class="dash-title" id="page-title">نظرة عامة</h1>
+    </div>
+
+    <!-- Overview -->
+    <section data-panel="overview">
+      <div class="stat-grid">
+        <div class="stat-card"><b id="s-stores">0</b><span>متاجر معتمدة</span></div>
+        <div class="stat-card"><b id="s-pending">0</b><span>طلبات بانتظار المراجعة</span></div>
+        <div class="stat-card"><b id="s-products">0</b><span>إجمالي المنتجات</span></div>
+        <div class="stat-card"><b id="s-suspended">0</b><span>متاجر موقوفة</span></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>أحدث طلبات التسجيل</h3><a href="#" data-tab="requests" class="btn btn-ghost btn-sm">عرض الكل</a></div>
+        <div id="overview-requests"><p style="color:var(--ink-soft);">جارٍ التحميل...</p></div>
+      </div>
+    </section>
+
+    <!-- Requests -->
+    <section data-panel="requests" style="display:none;">
+      <div class="panel">
+        <div class="panel-head"><h3>طلبات تسجيل المتاجر الجديدة</h3></div>
+        <div id="requests-list"><p style="color:var(--ink-soft);">جارٍ التحميل...</p></div>
+      </div>
+    </section>
+
+    <!-- Stores -->
+    <section data-panel="stores" style="display:none;">
+      <div class="panel">
+        <div class="panel-head"><h3>كل المتاجر</h3></div>
+        <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr><th></th><th>المتجر</th><th>المدينة</th><th>المنتجات</th><th>الحالة</th><th></th></tr></thead>
+          <tbody id="stores-table-body"><tr><td colspan="6" style="text-align:center; padding:30px;">جارٍ التحميل...</td></tr></tbody>
+        </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Products -->
+    <section data-panel="products" style="display:none;">
+      <div class="panel">
+        <div class="panel-head"><h3>كل المنتجات على المنصة</h3></div>
+        <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr><th></th><th>المنتج</th><th>المتجر</th><th>السعر</th><th>الحالة</th><th></th></tr></thead>
+          <tbody id="admin-products-body"><tr><td colspan="6" style="text-align:center; padding:30px;">جارٍ التحميل...</td></tr></tbody>
+        </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Categories -->
+    <section data-panel="categories" style="display:none;">
+      <div class="panel">
+        <div class="panel-head"><h3>تصنيفات المنصة</h3></div>
+        <form id="cat-form" style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+          <input type="text" id="cat-icon" placeholder="🏷️" style="width:70px; padding:12px; border-radius:10px; border:1.5px solid var(--line); text-align:center;">
+          <input type="text" id="cat-name" placeholder="اسم التصنيف" required style="flex:1; min-width:180px; padding:12px; border-radius:10px; border:1.5px solid var(--line);">
+          <button class="btn btn-primary">إضافة تصنيف</button>
+        </form>
+        <div id="categories-list"></div>
+      </div>
+    </section>
+
+    <!-- Settings -->
+    <section data-panel="settings" style="display:none;">
+      <div class="panel">
+        <div class="panel-head"><h3>هوية المنصة</h3></div>
+        <form id="settings-form">
+          <div style="display:flex; align-items:center; gap:16px; margin-bottom:20px;">
+            <img id="settings-logo-preview" class="logo-preview" src="" alt="شعار المنصة">
+            <div class="form-row" style="flex:1; margin-bottom:0;">
+              <label>رابط شعار المنصة (يظهر في الهيدر وكل الصفحات)</label>
+              <input type="url" id="st-logo" placeholder="https://...">
+              <p class="hint">الصق رابط صورة الشعار (يمكنك رفعه مسبقًا على أي مستضيف صور).</p>
+            </div>
+          </div>
+          <div class="form-grid-2">
+            <div class="form-row"><label>اسم المنصة</label><input type="text" id="st-name"></div>
+            <div class="form-row"><label>اللون الأساسي</label><input type="color" id="st-color" style="height:46px; padding:4px;"></div>
+          </div>
+          <div class="form-grid-2">
+            <div class="form-row"><label>البريد الإلكتروني للتواصل</label><input type="email" id="st-email"></div>
+            <div class="form-row"><label>رقم التواصل</label><input type="tel" id="st-phone"></div>
+          </div>
+          <div class="form-row"><label>ملاحظة العمولة / الاشتراكات (داخلية)</label><textarea id="st-note" rows="2"></textarea></div>
+          <div class="form-row"><label class="checkbox-row"><input type="checkbox" id="st-maint"> <span>تفعيل وضع الصيانة (إخفاء المنصة مؤقتًا عن الزوار)</span></label></div>
+          <div class="alert alert-success" id="settings-success">تم حفظ الإعدادات بنجاح.</div>
+          <button class="btn btn-primary">حفظ الإعدادات</button>
+        </form>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h3>بيانات تجريبية</h3></div>
+        <p class="hint" style="margin-bottom:16px;">يمكنك حذف المتجرين التجريبيين ومنتجاتهما بالكامل بعد الانتهاء من معاينة التصميم.</p>
+        <div id="demo-stores-list"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Approve/Reject/Suspend modal -->
+<div class="modal-overlay" id="action-modal">
+  <div class="modal">
+    <h3 id="action-modal-title">إجراء</h3>
+    <p id="action-modal-desc" style="color:var(--ink-soft); margin-bottom:16px; font-size:13.5px;"></p>
+    <div class="form-row" id="reason-row" style="display:none;">
+      <label>السبب (سيظهر لصاحب المتجر)</label>
+      <textarea id="action-reason" rows="3" placeholder="مثال: عدم اكتمال بيانات الدفع، مخالفة الشروط..."></textarea>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <button class="btn btn-primary" id="action-confirm-btn">تأكيد</button>
+      <button class="btn btn-ghost" id="action-cancel-btn">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/assets/js/config.js"></script>
+<script src="/assets/js/supabase-client.js"></script>
+<script src="/assets/js/app.js"></script>
+<script src="/assets/js/admin-dashboard.js"></script>
+</body>
+</html>
