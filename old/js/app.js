@@ -57,27 +57,14 @@ function lang(){ return localStorage.getItem('rw_lang') || 'ar'; }
 
 /* ---------------- Router ---------------- */
 const PAGES = ['home','browse','training','dashboard','admin'];
-const ALL_SECTIONS = [...PAGES, 'profile'];
 function goTo(page){
   location.hash = '#/' + page;
 }
-function hideAllSections(){
-  ALL_SECTIONS.forEach(p=> document.getElementById('page-'+p).classList.add('hidden'));
-}
 function handleRoute(){
-  const raw = location.hash.replace('#/','') || 'home';
-  if(raw.startsWith('u/')){
-    const username = decodeURIComponent(raw.slice(2));
-    hideAllSections();
-    document.getElementById('page-profile').classList.remove('hidden');
-    window.scrollTo({top:0,behavior:'instant'});
-    loadPublicProfile(username);
-    return;
-  }
-  const page = PAGES.includes(raw) ? raw : 'home';
+  const hash = location.hash.replace('#/','') || 'home';
+  const page = PAGES.includes(hash) ? hash : 'home';
   state.page = page;
-  hideAllSections();
-  document.getElementById('page-'+page).classList.remove('hidden');
+  PAGES.forEach(p=> document.getElementById('page-'+p).classList.toggle('hidden', p!==page));
   document.querySelectorAll('.nav-links a').forEach(a=> a.classList.toggle('active', a.dataset.page===page));
   window.scrollTo({top:0,behavior:'instant'});
 
@@ -89,40 +76,6 @@ function handleRoute(){
 }
 function refreshCurrentPage(){ handleRoute(); }
 window.addEventListener('hashchange', handleRoute);
-
-/* ---------------- Public marketer profile ---------------- */
-async function loadPublicProfile(username){
-  const wrap = document.getElementById('profile-content');
-  wrap.innerHTML = `<div class="loader"><div class="spinner"></div></div>`;
-  const { data: profile } = await supabaseClient.from('profiles').select('*').eq('username', username).maybeSingle();
-  if(!profile){
-    wrap.innerHTML = `<div class="empty-state">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
-      <p>${t('profile_not_found')}</p></div>`;
-    return;
-  }
-  const { data: posts } = await supabaseClient.from('posts').select('*').eq('marketer_id', profile.id).eq('status','published').order('is_featured',{ascending:false}).order('created_at',{ascending:false});
-  wrap.innerHTML = `
-    <div class="profile-head">
-      <span class="dash-avatar" style="width:64px;height:64px;font-size:22px;">${esc((profile.full_name||'؟').trim()[0])}</span>
-      <div>
-        <h2 style="margin:0 0 4px;display:flex;align-items:center;gap:6px;">${esc(profile.full_name)} ${profile.is_verified?'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 12l2.5 2.5L16 9"/></svg>':''}</h2>
-        <p style="margin:0;color:var(--text-soft);font-size:14px;max-width:520px;">${esc(profile.bio||'')}</p>
-      </div>
-    </div>
-    <h3 style="margin:28px 0 14px;font-size:18px;">${t('profile_posts')}</h3>
-    <div class="grid" id="profile-posts-grid"></div>
-  `;
-  const grid = document.getElementById('profile-posts-grid');
-  const merged = (posts||[]).map(p=>({ ...p, profiles: profile }));
-  renderGrid(grid, merged);
-}
-function copyReferralLink(){
-  const input = document.getElementById('referral-link-input');
-  input.select();
-  navigator.clipboard.writeText(input.value).catch(()=>{});
-  toast(t('link_copied'));
-}
 
 /* ---------------- Auth ---------------- */
 async function refreshSession(){
@@ -148,24 +101,6 @@ function updateAuthUI(){
   if(loggedIn && state.profile){
     document.getElementById('user-avatar-txt').textContent = (state.profile.full_name||'؟').trim()[0];
     document.getElementById('user-name-txt').textContent = state.profile.full_name;
-  }
-  const drawerAuth = document.getElementById('drawer-auth');
-  if(drawerAuth){
-    if(loggedIn){
-      drawerAuth.innerHTML = `
-        <div style="display:flex;align-items:center;gap:8px;padding:6px 4px;font-size:13.5px;font-weight:600;">
-          <span style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;">${esc((state.profile?.full_name||'؟').trim()[0])}</span>
-          ${esc(state.profile?.full_name||'')}
-        </div>
-        <button class="btn btn-ghost btn-sm btn-block" id="drawer-logout-btn">${t('logout')}</button>`;
-      document.getElementById('drawer-logout-btn').onclick = handleLogout;
-    } else {
-      drawerAuth.innerHTML = `
-        <button class="btn btn-ghost btn-sm btn-block" id="drawer-login-btn">${t('login')}</button>
-        <button class="btn btn-primary btn-sm btn-block" id="drawer-join-btn">${t('join')}</button>`;
-      document.getElementById('drawer-login-btn').onclick = ()=>{ document.getElementById('mobile-drawer').classList.remove('open'); openAuthModal('login'); };
-      document.getElementById('drawer-join-btn').onclick = ()=>{ document.getElementById('mobile-drawer').classList.remove('open'); openAuthModal('signup'); };
-    }
   }
 }
 
@@ -358,28 +293,15 @@ async function loadBrowse(){
   grid.innerHTML = `<div class="loader"><div class="spinner"></div></div>`;
   document.getElementById('browse-search-input').value = state.searchQuery;
 
-  const catId = state.activeCategory !== 'all' ? state.activeCategory : null;
-  let posts = [];
+  let query = supabaseClient.from('posts').select('*, profiles(full_name,is_verified,username)').eq('status','published');
+  if(state.activeCategory !== 'all') query = query.eq('category_id', state.activeCategory);
   if(state.searchQuery){
-    const { data, error } = await supabaseClient.rpc('search_posts', { search_query: state.searchQuery, cat_id: catId });
-    if(error) console.error(error);
-    posts = data || [];
-  } else {
-    let query = supabaseClient.from('posts').select('*').eq('status','published');
-    if(catId) query = query.eq('category_id', catId);
-    query = query.order('is_featured',{ascending:false}).order('created_at',{ascending:false});
-    const { data, error } = await query;
-    if(error) console.error(error);
-    posts = data || [];
+    const q = state.searchQuery.replace(/[%,]/g,'');
+    query = query.or(`title_ar.ilike.%${q}%,title_en.ilike.%${q}%,coupon_code.ilike.%${q}%,product_name.ilike.%${q}%,store_name.ilike.%${q}%,description_ar.ilike.%${q}%`);
   }
-  const ids = [...new Set(posts.map(p=>p.marketer_id))];
-  let profilesMap = {};
-  if(ids.length){
-    const { data: profs } = await supabaseClient.from('profiles').select('id,full_name,is_verified,username').in('id', ids);
-    (profs||[]).forEach(pr=> profilesMap[pr.id] = pr);
-  }
-  posts = posts.map(p=>({ ...p, profiles: profilesMap[p.marketer_id] }));
-  renderGrid(grid, posts);
+  query = query.order('is_featured',{ascending:false}).order('created_at',{ascending:false});
+  const { data, error } = await query;
+  renderGrid(grid, data||[]);
   renderCategoryChips();
 }
 function doSearch(q){
@@ -471,8 +393,6 @@ async function loadDashboard(){
   document.getElementById('dash-name').textContent = state.profile?.full_name || '';
   document.getElementById('dash-plan').textContent = state.profile?.plan==='premium' ? (lang()==='ar'?'باقة مميزة':'Premium plan') : (lang()==='ar'?'باقة مجانية':'Free plan');
   document.getElementById('dash-avatar-txt').textContent = (state.profile?.full_name||'؟').trim()[0];
-  const refInput = document.getElementById('referral-link-input');
-  if(refInput) refInput.value = location.origin + location.pathname + '#/u/' + (state.profile?.username||'');
 
   const { data: posts } = await supabaseClient.from('posts').select('views,clicks').eq('marketer_id', state.user.id);
   const totalViews = (posts||[]).reduce((s,p)=>s+(p.views||0),0);

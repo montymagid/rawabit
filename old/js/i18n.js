@@ -64,9 +64,6 @@ const DICT = {
     view_all:"عرض الكل",
     editing_avatar:"الصورة الشخصية", save_profile:"حفظ التغييرات", field_bio:"نبذة عني",
     demo_note:"حسابات تجريبية للمراجعة",
-    referral_title:"رابطك الخاص في المنصة", referral_desc:"شاركه مع متابعينك ليدخلوا مباشرة لصفحتك ويشتروا بأكوادك",
-    copy_link:"نسخ الرابط", link_copied:"تم نسخ الرابط!",
-    profile_not_found:"الحساب غير موجود", profile_posts:"عروض هذا المسوّق",
   },
   en: {
     dir:"ltr",
@@ -133,9 +130,6 @@ const DICT = {
     view_all:"View all",
     editing_avatar:"Profile photo", save_profile:"Save changes", field_bio:"Bio",
     demo_note:"Demo accounts for review",
-    referral_title:"Your platform link", referral_desc:"Share it with your followers so they land straight on your page and buy with your codes",
-    copy_link:"Copy link", link_copied:"Link copied!",
-    profile_not_found:"Account not found", profile_posts:"Deals by this marketer",
   }
 };
 
