@@ -126,6 +126,7 @@ function copyReferralLink(){
 
 /* ---------------- Auth ---------------- */
 async function refreshSession(){
+  if(!supabaseClient) return;
   const { data:{ session } } = await supabaseClient.auth.getSession();
   state.user = session?.user || null;
   if(state.user){
@@ -136,7 +137,6 @@ async function refreshSession(){
   }
   updateAuthUI();
 }
-supabaseClient.auth.onAuthStateChange((_evt, _session)=>{ refreshSession(); });
 
 function updateAuthUI(){
   const loggedIn = !!state.user;
@@ -188,58 +188,101 @@ function renderAuthTabs(){
 
 async function handleLogin(e){
   e.preventDefault();
+  const msg = document.getElementById('auth-msg');
+  msg.classList.remove('show');
+  if(!supabaseClient){
+    msg.textContent = lang()==='ar' ? 'تعذر الاتصال بالخادم، تأكد من اتصالك بالإنترنت وأعد تحميل الصفحة' : 'Could not connect to the server, check your internet connection and reload the page';
+    msg.className = 'form-msg show error';
+    return;
+  }
   const email = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-password').value;
   const btn = document.getElementById('login-submit-btn');
   btn.disabled = true;
-  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-  btn.disabled = false;
-  const msg = document.getElementById('auth-msg');
-  if(error){
-    msg.textContent = error.message;
+  try{
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    if(error){
+      msg.textContent = error.message;
+      msg.className = 'form-msg show error';
+      return;
+    }
+    closeAuthModal();
+    toast(t('toast_login_ok'));
+    await refreshSession();
+    refreshCurrentPage();
+  }catch(err){
+    console.error(err);
+    msg.textContent = lang()==='ar' ? 'حصل خطأ غير متوقع، حاول مرة تانية' : 'Unexpected error, please try again';
     msg.className = 'form-msg show error';
-    return;
+  }finally{
+    btn.disabled = false;
   }
-  closeAuthModal();
-  toast(t('toast_login_ok'));
-  await refreshSession();
-  refreshCurrentPage();
 }
 
 async function handleSignup(e){
   e.preventDefault();
+  const msg = document.getElementById('auth-msg');
+  msg.classList.remove('show');
+  if(!supabaseClient){
+    msg.textContent = lang()==='ar' ? 'تعذر الاتصال بالخادم، تأكد من اتصالك بالإنترنت وأعد تحميل الصفحة' : 'Could not connect to the server, check your internet connection and reload the page';
+    msg.className = 'form-msg show error';
+    return;
+  }
   const full_name = document.getElementById('signup-name').value.trim();
   const email = document.getElementById('signup-email').value.trim();
   const phone = document.getElementById('signup-phone').value.trim();
   const password = document.getElementById('signup-password').value;
   const btn = document.getElementById('signup-submit-btn');
   btn.disabled = true;
-  const { data, error } = await supabaseClient.auth.signUp({
-    email, password,
-    options:{ data:{ full_name } }
-  });
-  if(!error && data.user){
-    await supabaseClient.from('profiles').update({ phone }).eq('id', data.user.id);
-  }
-  btn.disabled = false;
-  const msg = document.getElementById('auth-msg');
-  if(error){
-    msg.textContent = error.message;
+  try{
+    const { data, error } = await supabaseClient.auth.signUp({
+      email, password,
+      options:{ data:{ full_name } }
+    });
+    if(error){
+      msg.textContent = error.message;
+      msg.className = 'form-msg show error';
+      return;
+    }
+    // البريد بيتأكد تلقائيا من جهة السيرفر، فنسجل الدخول فورا بعد إنشاء الحساب
+    if(!data.session){
+      const { error: signInErr } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if(signInErr){
+        toast(t('toast_signup_ok'));
+        closeAuthModal();
+        state.authTab = 'login';
+        openAuthModal('login');
+        return;
+      }
+    }
+    if(data.user){
+      await supabaseClient.from('profiles').update({ phone }).eq('id', data.user.id);
+    }
+    closeAuthModal();
+    toast(t('toast_signup_ok'));
+    await refreshSession();
+    refreshCurrentPage();
+  }catch(err){
+    console.error(err);
+    msg.textContent = lang()==='ar' ? 'حصل خطأ غير متوقع، حاول مرة تانية' : 'Unexpected error, please try again';
     msg.className = 'form-msg show error';
-    return;
+  }finally{
+    btn.disabled = false;
   }
-  closeAuthModal();
-  toast(t('toast_signup_ok'));
-  await refreshSession();
-  refreshCurrentPage();
 }
 
 async function handleLogout(){
-  await supabaseClient.auth.signOut();
-  toast(t('toast_logout_ok'));
-  goTo('home');
-  await refreshSession();
-  refreshCurrentPage();
+  if(!supabaseClient) return;
+  try{
+    await supabaseClient.auth.signOut();
+    toast(t('toast_logout_ok'));
+    goTo('home');
+    await refreshSession();
+    refreshCurrentPage();
+  }catch(err){
+    console.error(err);
+    toast(t('toast_error'));
+  }
 }
 
 /* ---------------- Categories ---------------- */
@@ -805,54 +848,74 @@ async function saveSettings(e){
 }
 
 /* ---------------- Init ---------------- */
+window.addEventListener('error', (e)=>{
+  console.error('Rawabit error:', e.error || e.message);
+});
+window.addEventListener('unhandledrejection', (e)=>{
+  console.error('Rawabit unhandled rejection:', e.reason);
+});
+
 document.addEventListener('DOMContentLoaded', async ()=>{
+  // 1) عناصر التحكم الأساسية بالواجهة — تتفعل دايما بغض النظر عن حالة الاتصال بالخادم
+  try{
+    document.getElementById('mobile-menu-btn').onclick = ()=> document.getElementById('mobile-drawer').classList.toggle('open');
+    document.querySelectorAll('.nav-links a, .drawer-link').forEach(a=>{
+      a.addEventListener('click', ()=> document.getElementById('mobile-drawer')?.classList.remove('open'));
+    });
+    document.getElementById('theme-toggle').onclick = ()=>{
+      applyTheme(document.documentElement.getAttribute('data-theme')==='dark' ? 'light' : 'dark');
+    };
+    document.getElementById('lang-toggle').onclick = ()=>{
+      applyLang(lang()==='ar' ? 'en' : 'ar');
+    };
+    document.querySelectorAll('[data-close-modal]').forEach(b=> b.onclick = (e)=> e.currentTarget.closest('.modal-backdrop').classList.remove('open'));
+    document.querySelectorAll('.modal-backdrop').forEach(m=> m.addEventListener('click', e=>{ if(e.target===m) m.classList.remove('open'); }));
+  }catch(err){ console.error('Rawabit: core UI binding failed', err); }
+
   applyTheme(localStorage.getItem('rw_theme') || 'light');
   applyLang(localStorage.getItem('rw_lang') || 'ar');
 
-  document.getElementById('theme-toggle').onclick = ()=>{
-    applyTheme(document.documentElement.getAttribute('data-theme')==='dark' ? 'light' : 'dark');
-  };
-  document.getElementById('lang-toggle').onclick = ()=>{
-    applyLang(lang()==='ar' ? 'en' : 'ar');
-  };
-  document.getElementById('btn-login').onclick = ()=> openAuthModal('login');
-  document.getElementById('btn-join').onclick = ()=> openAuthModal('signup');
-  document.getElementById('btn-logout').onclick = handleLogout;
-  document.getElementById('tab-login-btn').onclick = ()=>{ state.authTab='login'; renderAuthTabs(); };
-  document.getElementById('tab-signup-btn').onclick = ()=>{ state.authTab='signup'; renderAuthTabs(); };
-  document.getElementById('login-form').onsubmit = handleLogin;
-  document.getElementById('signup-form').onsubmit = handleSignup;
-  document.getElementById('post-form').onsubmit = handlePostSubmit;
-  document.getElementById('cat-form').onsubmit = addCategory;
-  document.getElementById('tv-form').onsubmit = addTrainingVideo;
-  document.getElementById('tp-form').onsubmit = addTrainingPdf;
-  document.getElementById('settings-form').onsubmit = saveSettings;
-  document.getElementById('media-input').onchange = handleMediaSelect;
+  // 2) عناصر متعلقة بالمصادقة والبيانات — نحميها لو الاتصال بـ Supabase فشل
+  try{
+    document.getElementById('btn-login').onclick = ()=> openAuthModal('login');
+    document.getElementById('btn-join').onclick = ()=> openAuthModal('signup');
+    document.getElementById('btn-logout').onclick = handleLogout;
+    document.getElementById('tab-login-btn').onclick = ()=>{ state.authTab='login'; renderAuthTabs(); };
+    document.getElementById('tab-signup-btn').onclick = ()=>{ state.authTab='signup'; renderAuthTabs(); };
+    document.getElementById('login-form').onsubmit = handleLogin;
+    document.getElementById('signup-form').onsubmit = handleSignup;
+    document.getElementById('post-form').onsubmit = handlePostSubmit;
+    document.getElementById('cat-form').onsubmit = addCategory;
+    document.getElementById('tv-form').onsubmit = addTrainingVideo;
+    document.getElementById('tp-form').onsubmit = addTrainingPdf;
+    document.getElementById('settings-form').onsubmit = saveSettings;
+    document.getElementById('media-input').onchange = handleMediaSelect;
+    document.getElementById('btn-new-post').onclick = ()=> openPostForm(null);
 
-  document.querySelectorAll('.js-search-input').forEach(inp=>{
-    let tm;
-    inp.addEventListener('input', ()=>{
-      clearTimeout(tm);
-      tm = setTimeout(()=> doSearch(inp.value.trim()), 350);
+    document.querySelectorAll('.js-search-input').forEach(inp=>{
+      let tm;
+      inp.addEventListener('input', ()=>{
+        clearTimeout(tm);
+        tm = setTimeout(()=> doSearch(inp.value.trim()), 350);
+      });
+      inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); doSearch(inp.value.trim()); }});
     });
-    inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); doSearch(inp.value.trim()); }});
-  });
 
-  document.querySelectorAll('[data-close-modal]').forEach(b=> b.onclick = (e)=> e.currentTarget.closest('.modal-backdrop').classList.remove('open'));
-  document.querySelectorAll('.modal-backdrop').forEach(m=> m.addEventListener('click', e=>{ if(e.target===m) m.classList.remove('open'); }));
+    document.querySelectorAll('[data-dash-tab]').forEach(a=> a.onclick=(e)=>{ e.preventDefault(); setDashTab(a.dataset.dashTab); });
+    document.querySelectorAll('[data-admin-tab]').forEach(a=> a.onclick=(e)=>{ e.preventDefault(); setAdminTab(a.dataset.adminTab); });
+  }catch(err){ console.error('Rawabit: interactive UI binding failed', err); }
 
-  document.getElementById('btn-new-post').onclick = ()=> openPostForm(null);
-  document.getElementById('mobile-menu-btn').onclick = ()=> document.getElementById('mobile-drawer').classList.toggle('open');
-
-  document.querySelectorAll('.nav-links a, .drawer-link').forEach(a=>{
-    a.addEventListener('click', ()=>{
-      document.getElementById('mobile-drawer')?.classList.remove('open');
-    });
-  });
-
-  document.querySelectorAll('[data-dash-tab]').forEach(a=> a.onclick=(e)=>{ e.preventDefault(); setDashTab(a.dataset.dashTab); });
-  document.querySelectorAll('[data-admin-tab]').forEach(a=> a.onclick=(e)=>{ e.preventDefault(); setAdminTab(a.dataset.adminTab); });
-
+  // 3) الاتصال بالخادم
+  if(!supabaseClient){
+    const banner = document.createElement('div');
+    banner.style.cssText = 'position:fixed;top:0;inset-inline:0;z-index:500;background:#ef4444;color:#fff;text-align:center;padding:10px;font-size:13.5px;font-weight:600;';
+    banner.textContent = lang()==='ar'
+      ? '⚠️ تعذر الاتصال بالخادم — تأكد من اتصالك بالإنترنت وأعد تحميل الصفحة'
+      : '⚠️ Could not connect to the server — check your internet connection and reload the page';
+    document.body.prepend(banner);
+    return;
+  }
+  supabaseClient.auth.onAuthStateChange((_evt, _session)=>{ refreshSession(); });
   await loadCategories();
   await refreshSession();
   handleRoute();

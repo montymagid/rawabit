@@ -131,7 +131,7 @@ input,select,textarea{font-family:inherit;}
   .search-wrap{display:none;}
 }
 #mobile-drawer{display:none;}
-#mobile-drawer.open{display:flex;}
+#mobile-drawer.open{display:flex !important;}
 
 /* ---------- Hero ---------- */
 .hero{padding:64px 0 40px;position:relative;}
