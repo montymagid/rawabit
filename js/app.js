@@ -79,6 +79,7 @@ function handleRoute(){
   hideAllSections();
   document.getElementById('page-'+page).classList.remove('hidden');
   document.querySelectorAll('.nav-links a').forEach(a=> a.classList.toggle('active', a.dataset.page===page));
+  document.querySelectorAll('.bn-item[data-page]').forEach(a=> a.classList.toggle('active', a.dataset.page===page));
   window.scrollTo({top:0,behavior:'instant'});
 
   if(page==='home') loadHome();
@@ -592,12 +593,17 @@ function openPostForm(post){
     document.getElementById('post-discount').value = post.discount_text||'';
     document.getElementById('post-link').value = post.affiliate_link||'';
     document.getElementById('post-general').checked = !!post.is_general;
+    document.getElementById('post-featured-opt').checked = !!post.featured_opt_in;
     if(post.media_url){
       document.getElementById('upload-preview').innerHTML = post.media_type==='video'
         ? `<video src="${esc(post.media_url)}" controls></video>` : `<img src="${esc(post.media_url)}">`;
       state.mediaFile = { existingUrl: post.media_url, existingType: post.media_type };
     }
   }
+  refreshFeaturedEligibility().then(()=>{
+    document.getElementById('post-featured-row').classList.toggle('hidden', !state.isFeaturedMarketer);
+    document.getElementById('post-featured-locked').classList.toggle('hidden', !!state.isFeaturedMarketer);
+  });
   document.getElementById('modal-post-form').classList.add('open');
 }
 function closePostForm(){ document.getElementById('modal-post-form').classList.remove('open'); }
@@ -642,6 +648,7 @@ async function handlePostSubmit(e){
       discount_text: document.getElementById('post-discount').value.trim(),
       affiliate_link: document.getElementById('post-link').value.trim(),
       is_general: document.getElementById('post-general').checked,
+      featured_opt_in: document.getElementById('post-featured-opt').checked,
       media_url, media_type,
       status: 'pending' // كل عرض جديد أو معدّل لازم يمر على مراجعة الإدارة
     };
@@ -664,12 +671,24 @@ async function handlePostSubmit(e){
 }
 
 /* Featured requests (marketer) */
-async function requestFeatured(type, amount){
+async function requestFeatured(type, amount, duration){
   if(!state.user) return;
-  const { error } = await supabaseClient.from('featured_requests').insert({ marketer_id: state.user.id, type, amount });
+  const { error } = await supabaseClient.from('featured_requests').insert({ marketer_id: state.user.id, type, amount, duration_days: duration||null });
   if(error){ toast(t('toast_error')); return; }
   toast(t('toast_request_sent'));
   loadMyFeatured();
+  refreshFeaturedEligibility();
+}
+function featuredStatusLabel(r){
+  if(r.status==='pending') return `<span class="pill pend">${t('ft_pending')}</span>`;
+  if(r.status==='rejected') return `<span class="pill rej">${t('ft_rejected')}</span>`;
+  if(r.status==='cancelled') return `<span class="pill rej">${t('ft_cancelled')}</span>`;
+  if(r.status==='expired') return `<span class="pill rej">${t('ft_expired')}</span>`;
+  if(r.status==='approved'){
+    if(r.expires_at === null) return `<span class="pill pub">${t('role_admin')==='Admin'?'':''}✓</span>`;
+    return `<span class="pill pub">${t('ft_active_until')} ${fmtDate(r.expires_at)}</span>`;
+  }
+  return r.status;
 }
 async function loadMyFeatured(){
   const wrap = document.getElementById('my-featured-tbody');
@@ -678,9 +697,14 @@ async function loadMyFeatured(){
   wrap.innerHTML = data.map(r=>`<tr>
     <td>${t('ft_'+(r.type==='top_search'?'top_search':r.type==='homepage'?'home':r.type==='repeated_display'?'repeat':'badge'))}</td>
     <td>$${r.amount}</td>
-    <td><span class="pill ${r.status==='approved'?'pub':r.status==='pending'?'pend':'rej'}">${r.status}</span></td>
+    <td>${featuredStatusLabel(r)}</td>
     <td>${fmtDate(r.created_at)}</td>
   </tr>`).join('');
+}
+async function refreshFeaturedEligibility(){
+  if(!state.user){ state.isFeaturedMarketer = false; return; }
+  const { data } = await supabaseClient.rpc('is_marketer_featured', { uid: state.user.id });
+  state.isFeaturedMarketer = !!data;
 }
 async function loadMyWallet(){
   document.getElementById('wallet-balance-big').textContent = '$' + (state.profile?.wallet_balance||0).toFixed(2);
@@ -792,25 +816,33 @@ async function addCategory(e){
 async function loadAdminFeatured(){
   const wrap = document.getElementById('admin-featured-tbody');
   const { data } = await supabaseClient.from('featured_requests').select('*, profiles(full_name)').order('created_at',{ascending:false});
-  if(!data || !data.length){ wrap.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text-soft)">${t('no_data')}</td></tr>`; return; }
+  if(!data || !data.length){ wrap.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-soft)">${t('no_data')}</td></tr>`; return; }
   wrap.innerHTML = data.map(r=>`<tr>
     <td>${esc(r.profiles?.full_name||'')}</td>
-    <td>${r.type}</td>
+    <td>${t('ft_'+(r.type==='top_search'?'top_search':r.type==='homepage'?'home':r.type==='repeated_display'?'repeat':'badge'))}</td>
     <td>$${r.amount}</td>
-    <td><span class="pill ${r.status==='approved'?'pub':r.status==='pending'?'pend':'rej'}">${r.status}</span></td>
+    <td>${featuredStatusLabel(r)}</td>
+    <td>${r.expires_at ? fmtDate(r.expires_at) : '—'}</td>
     <td class="row-actions">
-      ${r.status!=='approved' ? `<button class="icon-mini" onclick="adminSetFeaturedStatus('${r.id}','approved')">✅</button>`:''}
-      ${r.status!=='rejected' ? `<button class="icon-mini" onclick="adminSetFeaturedStatus('${r.id}','rejected')">🚫</button>`:''}
+      ${(r.status==='pending'||r.status==='rejected') ? `<button class="icon-mini" onclick="adminSetFeaturedStatus('${r.id}','approved','${r.type}')" title="${t('approve')}">✅</button>`:''}
+      ${r.status==='pending' ? `<button class="icon-mini" onclick="adminSetFeaturedStatus('${r.id}','rejected')" title="${t('reject')}">🚫</button>`:''}
+      ${r.status==='approved' ? `<button class="icon-mini" onclick="adminSetFeaturedStatus('${r.id}','cancelled')" title="${t('cancel_feature')}">⛔</button>`:''}
     </td>
   </tr>`).join('');
 }
-async function adminSetFeaturedStatus(id, status){
-  const { data: req } = await supabaseClient.from('featured_requests').select('*').eq('id', id).single();
-  await supabaseClient.from('featured_requests').update({ status }).eq('id', id);
-  if(status==='approved' && req){
-    if(req.post_id) await supabaseClient.from('posts').update({ is_featured:true }).eq('id', req.post_id);
-    await supabaseClient.from('transactions').insert({ marketer_id: req.marketer_id, type:'featured_ad', amount:req.amount, note:req.type });
+async function adminSetFeaturedStatus(id, status, type){
+  let duration = null;
+  if(status==='approved' && type!=='verified_badge'){
+    const preset = { top_search:7, homepage:14, repeated_display:7 }[type] || 7;
+    const raw = window.prompt(t('ft_duration_prompt'), preset);
+    if(raw === null) return; // admin cancelled the prompt
+    duration = parseInt(raw, 10);
+    if(!duration || duration < 1) duration = preset;
   }
+  const payload = { status };
+  if(duration) payload.duration_days = duration;
+  const { error } = await supabaseClient.from('featured_requests').update(payload).eq('id', id);
+  if(error){ toast(t('toast_error')); return; }
   toast(t('toast_saved'));
   loadAdminFeatured();
 }
@@ -869,7 +901,8 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   // 1) عناصر التحكم الأساسية بالواجهة — تتفعل دايما بغض النظر عن حالة الاتصال بالخادم
   try{
     document.getElementById('mobile-menu-btn').onclick = ()=> document.getElementById('mobile-drawer').classList.toggle('open');
-    document.querySelectorAll('.nav-links a, .drawer-link').forEach(a=>{
+    document.getElementById('bn-more-btn').onclick = ()=> document.getElementById('mobile-drawer').classList.toggle('open');
+    document.querySelectorAll('.nav-links a, .drawer-link, .bn-item[data-page]').forEach(a=>{
       a.addEventListener('click', ()=> document.getElementById('mobile-drawer')?.classList.remove('open'));
     });
     document.getElementById('theme-toggle').onclick = ()=>{
@@ -926,6 +959,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     return;
   }
   supabaseClient.auth.onAuthStateChange((_evt, _session)=>{ refreshSession(); });
+  supabaseClient.rpc('expire_featured_now').then(()=>{}); // fire-and-forget self-heal, cron also runs this every 10 min
   await loadCategories();
   await refreshSession();
   handleRoute();

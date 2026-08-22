@@ -67,6 +67,13 @@ const DICT = {
     referral_title:"رابطك الخاص في المنصة", referral_desc:"شاركه مع متابعينك ليدخلوا مباشرة لصفحتك ويشتروا بأكوادك",
     copy_link:"نسخ الرابط", link_copied:"تم نسخ الرابط!",
     profile_not_found:"الحساب غير موجود", profile_posts:"عروض هذا المسوّق",
+    field_featured_opt_in:"اظهار هذا العرض ضمن العروض المميزة",
+    featured_opt_in_locked:"تحتاج اشتراك مميز فعّال عشان تفعّل هذا الخيار — من صفحة طلبات التمييز",
+    ft_active_until:"مفعّل حتى", ft_expired:"منتهي", ft_cancelled:"ملغى بواسطة الإدارة", ft_pending:"قيد المراجعة", ft_rejected:"مرفوض",
+    ft_duration_prompt:"حدد عدد أيام تفعيل هذا الطلب:", ft_days:"يوم",
+    cancel_feature:"إلغاء التمييز", th_expiry:"ينتهي في",
+    ft_days_7:"أسبوع", ft_days_14:"أسبوعين", ft_days_30:"شهر",
+    nav_more:"المزيد",
   },
   en: {
     dir:"ltr",
@@ -136,6 +143,13 @@ const DICT = {
     referral_title:"Your platform link", referral_desc:"Share it with your followers so they land straight on your page and buy with your codes",
     copy_link:"Copy link", link_copied:"Link copied!",
     profile_not_found:"Account not found", profile_posts:"Deals by this marketer",
+    field_featured_opt_in:"Show this deal in Featured deals",
+    featured_opt_in_locked:"You need an active featured plan to enable this — request one from the Featured tab",
+    ft_active_until:"Active until", ft_expired:"Expired", ft_cancelled:"Cancelled by admin", ft_pending:"Pending review", ft_rejected:"Rejected",
+    ft_duration_prompt:"Set how many days this plan should be active:", ft_days:"days",
+    cancel_feature:"Cancel feature", th_expiry:"Expires",
+    ft_days_7:"1 week", ft_days_14:"2 weeks", ft_days_30:"1 month",
+    nav_more:"More",
   }
 };
 
