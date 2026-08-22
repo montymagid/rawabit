@@ -169,9 +169,20 @@ function updateAuthUI(){
   }
 }
 
+function renderDemoHint(){
+  const el = document.getElementById('demo-hint');
+  if(!el) return;
+  const isAr = lang()==='ar';
+  el.innerHTML = `
+    <b>${t('demo_note')}</b>
+    <div class="demo-row"><span>${isAr?'إدارة':'Admin'}:</span> <code>admin@rawabit.demo</code> / <code>Admin@12345</code></div>
+    <div class="demo-row"><span>${isAr?'مسوّق':'Marketer'}:</span> <code>marketer@rawabit.demo</code> / <code>Marketer@12345</code></div>
+  `;
+}
 function openAuthModal(tab){
   state.authTab = tab || 'login';
   renderAuthTabs();
+  renderDemoHint();
   document.getElementById('modal-auth').classList.add('open');
 }
 function closeAuthModal(){ document.getElementById('modal-auth').classList.remove('open'); }
@@ -365,8 +376,7 @@ async function copyCode(e){
   if(code){
     try{ await navigator.clipboard.writeText(code); }catch(err){}
     toast(t('copied'));
-    const { data } = await supabaseClient.from('posts').select('clicks').eq('id', postId).single();
-    if(data) await supabaseClient.from('posts').update({ clicks:(data.clicks||0)+1 }).eq('id', postId);
+    supabaseClient.rpc('increment_post_click', { pid: postId }).then(()=>{});
   } else {
     openPostDetail(postId);
   }
@@ -429,13 +439,14 @@ function doSearch(q){
   state.searchQuery = q;
   goTo('browse');
   loadBrowse();
+  document.getElementById('mobile-drawer')?.classList.remove('open');
 }
 
 /* ---------------- Post detail ---------------- */
 async function openPostDetail(id){
   const { data: p } = await supabaseClient.from('posts').select('*, profiles(full_name,is_verified,username)').eq('id', id).single();
   if(!p) return;
-  await supabaseClient.from('posts').update({ views:(p.views||0)+1 }).eq('id', id);
+  supabaseClient.rpc('increment_post_view', { pid: id }).then(()=>{}); // fire-and-forget، ما نعطّل عرض التفاصيل لو فشل
   const cat = state.categories.find(c=>c.id===p.category_id);
   const title = lang()==='ar' ? p.title_ar : (p.title_en||p.title_ar);
   const desc = lang()==='ar' ? p.description_ar : (p.description_en||p.description_ar);
@@ -462,8 +473,7 @@ async function openPostDetail(id){
   document.getElementById('modal-post').classList.add('open');
 }
 async function trackClick(id){
-  const { data } = await supabaseClient.from('posts').select('clicks').eq('id', id).single();
-  if(data) await supabaseClient.from('posts').update({ clicks:(data.clicks||0)+1 }).eq('id', id);
+  supabaseClient.rpc('increment_post_click', { pid: id }).then(()=>{});
 }
 
 /* ---------------- Training ---------------- */
@@ -633,7 +643,7 @@ async function handlePostSubmit(e){
       affiliate_link: document.getElementById('post-link').value.trim(),
       is_general: document.getElementById('post-general').checked,
       media_url, media_type,
-      status: 'published'
+      status: 'pending' // كل عرض جديد أو معدّل لازم يمر على مراجعة الإدارة
     };
     let error;
     if(state.editingPostId){

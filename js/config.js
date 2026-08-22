@@ -1,6 +1,6 @@
 // إعدادات الاتصال بـ Supabase الخاص بمنصة "روابط"
-const SUPABASE_URL = "https://yrepoludvtiivfdypihd.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlyZXBvbHVkdnRpaXZmZHlwaWhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyMDA5NzEsImV4cCI6MjEwMjc3Njk3MX0.ghJoJgqzcFr6ZqWgiT9hYFfs7yCQlYTSLFVJsYCzFdg";
+const SUPABASE_URL = "https://dgliysnbdfbwnlsdewxz.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRnbGl5c25iZGZid25sc2Rld3h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczOTA3NjksImV4cCI6MjEwMjk2Njc2OX0.S1BOOgIYphz9Djixl0n8Togs8GhU4fNdXswNNgAXC94";
 
 // نبني الاتصال داخل try/catch عشان لو مكتبة Supabase ما اتحملت (مشكلة إنترنت/حاجب إعلانات)،
 // الموقع يفضل شغال (القوائم، الوضع الداكن، اللغة) بدل ما ينهار بالكامل صامتا.
